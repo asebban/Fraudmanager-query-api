@@ -62,7 +62,7 @@
 		<dependency>
 			<groupId>ma.s2m</groupId>
 			<artifactId>serializer</artifactId>
-			<version>2.1.0-RELEASE</version>
+			<version>1.0.0-RELEASE</version>
 		</dependency>
 	</dependencies>
 
