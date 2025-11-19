@@ -134,7 +134,7 @@ public class FraudQueryApi {
 
     public static Long parseDurationToMillis(String input) {
         if (input == null || input.isBlank()) {
-            throw new IllegalArgumentException("Input cannot be null or blank");
+            return 0L;
         }
 
         // Normalisation et séparation
