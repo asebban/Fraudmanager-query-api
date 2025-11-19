@@ -66,7 +66,7 @@ public class FraudQueryApi {
     @GetMapping("/query")
     public Mono<ResponseEntity<FraudQueryResponse>> query(
             @RequestParam("key") String key,
-            @RequestParam("timeframe") String timeframe,
+            @RequestParam(value = "timeframe", required=false) String timeframe,
             @RequestParam("subject") String subject) {
 
         Message reply;
