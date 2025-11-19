@@ -73,7 +73,7 @@ public class FraudQueryApi {
         UUID uuid = UUID.randomUUID();
 
         // Validate inputs early
-        if (!StringUtils.hasText(key) || !StringUtils.hasText(timeframe)) {
+        if (!StringUtils.hasText(key) || !StringUtils.hasText(subject)) {
             return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
         }
 
