@@ -105,7 +105,7 @@ public class FraudQueryApi {
             try {
                 // 3) Deserialize response into FraudQueryResponse
                 FraudQueryResponse response = (FraudQueryResponse) SerializationManager.deserialize(reply.getData());
-                logger.info("[{}] Response receved", response.getCorrelationId());
+                logger.info("[{}] Response received", response.getCorrelationId());
                 return Mono.just(ResponseEntity.ok(response));
             } catch (Exception e) {
                 logger.error("Error occurred while processing NATS request", e);
