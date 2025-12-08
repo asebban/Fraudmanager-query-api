@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>ma.s2m</groupId>
 	<artifactId>fraud-query-api</artifactId>
-	<version>1.1.2-SNAPSHOT</version>
+	<version>1.0.0-RELEASE</version>
 	<name>fraud-query-api</name>
 	<description>Fraud Query API: API that returns the counters of a specific key</description>
 	<url/>
@@ -57,7 +57,7 @@
 		<dependency>
 			<groupId>ma.s2m</groupId>
 			<artifactId>auth</artifactId>
-			<version>2.1.0-RELEASE</version>
+			<version>2.7.0-RELEASE</version>
 		</dependency>
 		<dependency>
 			<groupId>ma.s2m</groupId>
