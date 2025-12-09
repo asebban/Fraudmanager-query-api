@@ -2,18 +2,17 @@ package ma.s2m.fraudquery.controllers;
 
 import io.nats.client.Connection;
 import io.nats.client.Message;
-import io.nats.client.Nats;
 import io.nats.client.impl.Headers;
 import ma.s2m.auth.query.FraudQueryRequest;
 import ma.s2m.auth.query.FraudQueryResponse;
 import ma.s2m.auth.query.Indicator;
+import ma.s2m.functions.Function;
+import ma.s2m.repository.IRepository;
+import ma.s2m.repository.PropertiesRepository;
 import ma.s2m.serializer.SerializationManager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,6 +47,10 @@ public class FraudQueryApi {
     private String topic;
     private Logger logger = LoggerFactory.getLogger(FraudQueryApi.class);
 
+    private boolean fraudMultiNode;
+    private int diskShardCount;
+    private IRepository centralRepository;
+
     private static final Long SECONDS_IN_MILLIS = 1000L;
     private static final Long MINUTES_IN_MILLIS = 60 * SECONDS_IN_MILLIS;
     private static final Long HOURS_IN_MILLIS = 60 * MINUTES_IN_MILLIS;
@@ -56,11 +60,23 @@ public class FraudQueryApi {
     private static final Long YEARS_IN_MILLIS = 365 * DAYS_IN_MILLIS; // approximated 
 
     public FraudQueryApi(Connection nats,
-                         @Value("${fraud.query.topic:fraud.query}") String topic,
                          Duration timeout) {
         this.nats = nats;
         this.timeout = timeout;
-        this.topic = topic;
+
+        IRepository localPropertyFile = new PropertiesRepository("application.properties");
+        String repositoryClassName = localPropertyFile.getProperty("app.processor.repository.class", "ma.s2m.repository.PropertiesRepository");
+        this.centralRepository = (IRepository) Function.createDynamicClass(repositoryClassName);
+        try {
+            this.centralRepository.load();
+            this.topic = this.centralRepository.getProperty("nats.query.topic", "fraud.query");
+            this.fraudMultiNode = Boolean.parseBoolean(this.centralRepository.getProperty("fraudmanager.multinode", "false"));
+            this.diskShardCount = Integer.parseInt(this.centralRepository.getProperty("rocksdb.disk.shard.count", "64"));
+        } catch (IOException e) {
+            logger.error("Failed to load properties", e);
+            e.printStackTrace();
+        }
+
     }
 
     @GetMapping("/query")
@@ -94,7 +110,16 @@ public class FraudQueryApi {
             headers.put("x-client-publish-ts-ms", Long.toString(clientPublishMs));
 
             long natsPublishTime = System.currentTimeMillis();
-            reply = nats.request(topic, headers, payload, Duration.ofMillis(1000));
+            
+            String targetTopic = this.topic;
+            if (fraudMultiNode) {
+                String shardingKey = subject + ":" + key;
+                int shardId = Function.calculateShardId(shardingKey, diskShardCount);
+                targetTopic = this.topic + "." + shardId;
+                logger.debug("Multi-node enabled. Routing key '{}' to shard {} (topic: {})", shardingKey, shardId, targetTopic);
+            }
+
+            reply = nats.request(targetTopic, headers, payload, Duration.ofMillis(1000));
             long endNatsPublishTime = System.currentTimeMillis();
             logger.info("NATS reply time (ms): " + (endNatsPublishTime - natsPublishTime));
 
@@ -179,21 +204,6 @@ public class FraudQueryApi {
     }
 }
 
-// ===== NATS Configuration =====
-@Configuration
-class NatsConfig {
-
-    @Bean(destroyMethod = "close")
-    public Connection natsConnection(@Value("${nats.url:nats://localhost:4222}") String url) throws Exception {
-        // Create a singleton NATS connection for the app; Spring will close it on shutdown
-        return Nats.connect(url);
-    }
-
-    @Bean
-    public Duration fraudQueryTimeout(@Value("${fraud.query.timeout:5s}") String timeoutString) {
-        return Duration.parse("PT" + timeoutString.toUpperCase());
-    }
-}
 
 // ===== Optional: health ping component to verify NATS at startup (non-blocking) =====
 @Component
