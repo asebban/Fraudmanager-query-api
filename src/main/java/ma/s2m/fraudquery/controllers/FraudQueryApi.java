@@ -71,7 +71,7 @@ public class FraudQueryApi {
             this.centralRepository.load();
             this.topic = this.centralRepository.getProperty("nats.query.topic", "fraud.query");
             this.fraudMultiNode = Boolean.parseBoolean(this.centralRepository.getProperty("fraudmanager.multinode", "false"));
-            this.diskShardCount = Integer.parseInt(this.centralRepository.getProperty("rocksdb.disk.shard.count", "64"));
+            this.diskShardCount = Integer.parseInt(this.centralRepository.getProperty("storage.disk.shard.count", "64"));
         } catch (IOException e) {
             logger.error("Failed to load properties", e);
             e.printStackTrace();
